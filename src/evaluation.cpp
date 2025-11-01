@@ -152,7 +152,7 @@ Value DivVar::evalRator(const std::vector<Value> &args) { // / with multiple arg
 }
 
 Value Expt::evalRator(const Value &rand1, const Value &rand2) { // expt
-    if (rand1->v_type == V_INT and rand2->v_type == V_INT) {
+    if (rand1->v_type == V_INT && rand2->v_type == V_INT) {
         int base = dynamic_cast<Integer*>(rand1.get())->n;
         int exponent = dynamic_cast<Integer*>(rand2.get())->n;
         

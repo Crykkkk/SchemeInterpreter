@@ -2,7 +2,7 @@
 
 > SJTU CS1958-01 2025Fall 第三次大作业
 
-请先阅读 [解释器简明教程](https://notes.sjtu.edu.cn/pzbJsIoKQbSwt66MZR-vdQ)，有兴趣可以阅读 [为什么 Lisp 语言如此先进？](https://www.ruanyifeng.com/blog/2010/10/why_lisp_is_superior.html):)
+请先阅读 [解释器简明教程](https://notes.sjtu.edu.cn/s/mAgan6OSB)，有兴趣可以阅读 [为什么 Lisp 语言如此先进？](https://www.ruanyifeng.com/blog/2010/10/why_lisp_is_superior.html):)
 
 ## 内容概述
 
@@ -143,10 +143,56 @@ R = 119
 | `Pair`      | 表类     | 可递归式储存二元对从而储存表，用 `pair?` 判断                                                               |
 | `Null`      | 空类     | 空表 (`'()`)，用 `null?` 判断                                                                               |
 | `Terminate` | 终止类   | `(exit)` 的值类型                                                                                           |
-| `Void`      | 过程类   | 表示所有没有副作用的函数，包括 `(void),set!,display` 等，我们要求除了 `(void)` 之外其他命令不输出 `#<void>` |
+| `Void`      | 过程类   | 表示所有没有副作用的函数，包括 `(begin),(void),set!,display` 等，我们要求除了 `(void)` 之外其他命令不输出 `#<void>` |
 | `Procedure` | 函数类   | 用来表示函数的闭包，用 `procedure?` 判断                                                                    |
 
 我们已经为你实现了所有的类型处理与类型判断，在 `Subtask 1` 中，你将会接触到 `Integer` 与 `Boolean`.
+
+类型判断demo:
+
+`(number? expr)`、`(boolean? expr)`、`(null? expr)`、`(pair? expr)`、`(symbol? expr)` 分别表示 `expr` 的值的类型是否为 `Integer`、`Boolean`、`Null`、`Pair`、`Symbol`。它们接受一个任意类型的参数，值为对应的结果，类型为 `Boolean`。
+
+`(eq? expr1 expr2)` 表示检查 `expr1` 与 `expr2` 的值是否相等。该表达式接受两个任意类型的参数，值为对应的结果，类型为 `Boolean`。具体的比较规则：
+
+- 若两个参数的类型都为 `Integer`，则比较对应的整数是否相同
+- 若两个参数的类型都为 `Boolean`，则比较对应的布尔值是否相同
+- 若两个参数的类型都为 `Symbol`，则比较对应的字符串是否相同
+- 若两个参数的类型都为 `Null` 或都为 `Void`，则值为 `#t`
+- 否则，比较两个值指向的内存位置是否相同（例如两个 `Pair`，即使它们左右值都相等，但如果内存位置不同，我们也认为两者不同）
+
+我们提供的接口中存的是指向值的指针而非值本身， 你可以通过定义 `Value v` 并使用 `v.get()` 来查看 `v` 指向的内存位置。
+
+样例：
+
+```
+scm> (not #f)
+#t
+scm> (not (void))
+#f
+scm> (pair? (car (cons 1 2)))
+#f
+scm> (symbol? (quote var))
+#t
+scm> (number? (+ 5 1))
+#t
+scm> (null? (quote ()))
+#t
+scm> (eq? 3 (+ 1 2))
+#t
+scm> (eq? #t (= 0 0))
+#t
+scm> (eq? (quote ()) (quote ()))
+#t
+scm> (eq? (quote (1 2 3)) (quote (1 2 3)))
+#f
+scm> (define str "hello")
+scm> (eq? str str)
+#t
+scm> (eq? "hello" "hello")
+#f
+scm> (eq? 1 1)
+#t
+```
 
 #### 基本算术操作
 
@@ -174,7 +220,7 @@ R = 119
 ;;1 parameter: (+ x) → x;(* x) → x;(- x) → -x;(/ x) → 1/x
 ;;2 parameter: also right;
 ;;more parameters:
-(+ 2 3 4) ;-> 10
+(+ 2 3 4) ;-> 9
 (- 2 3 4) ;-> -5
 (* 2 3 4) ;-> 24
 (/ 2 3 4) ;-> 1/6
@@ -340,12 +386,16 @@ R = 119
 
 `or` 具有可变个数的参数，并从左到右对它们求值。它返回第一个不是值 `#f` 的参数，而余下的参数不会被求值。如果所有的参数的值都是 `#f` 的话，则返回最后一个参数的值。
 
+请特别注意，在 `scheme` 中，任何不同于 `#f` 的值（包括不同类型的值,包括 `'()`）都会被视作 `#t`。
+
 请注意 `and` 与 `or` 都具有短路性质，即遇到符合要求的布尔表达式后，如果其后有非法表达式，是不需要报错的。即形如 `(and #f (/ 1 0))` 的式子是合法的.
 
 ```scheme
 (not (> 1 2))
 ;;Value: ;;Value: #t
 (not (< 1 2))
+;;Value: #f
+(not 5)
 ;;Value: #f
 (and)
 ;Value: #t
@@ -390,6 +440,8 @@ R = 119
 ;;Value: true-branch
 (if #f (/ 1 0) 'false-branch)
 ;;Value: false-branch
+(if #t (void) 1)
+;;Value: #<void>
 ```
 
 #### `cond` 语句
@@ -405,7 +457,7 @@ R = 119
   (else        clauses_else))
 ```
 
-在 `cond` 表达式中，`predicates_i` 是按照从上到下的顺序求值，而当 `predicates_i` 为真时，`clause_i` 会被求值并返回。`i` 之后的 `predicates` 和 `clauses` 不会被求值。如果所有的 `predicates_i` 都是假的话，则返回 `cluase_else`。在一个子句中，你可以写数条表达式，而 `clause` 的值是最后一条表达式; 特别地，如果没有匹配的分支，则返回 `VoidV()`；如果对于单条件分支只有条件没有分支 (比如 `(cond (#t))`)，那么返回条件值；
+在 `cond` 表达式中，`predicates_i` 是按照从上到下的顺序求值，而当 `predicates_i` 为真时，`clause_i` 会被求值并返回。`i` 之后的 `predicates` 和 `clauses` 不会被求值。如果所有的 `predicates_i` 都是假的话，则返回 `cluase_else`。在一个子句中，你可以写数条表达式，而 `clause` 的值是最后一条表达式( 注意 `cond` 同样遵循短路求值的特性); 特别地，如果没有匹配的分支，则返回 `VoidV()`；如果对于单条件分支只有条件没有分支 (比如 `(cond (#t))`)，那么返回条件值；比如 ` (cond (else 1) (#t 2))` 输出 `1`;
 
 #### `begin` 语句
 
@@ -414,6 +466,8 @@ R = 119
 ```scheme
 (begin 1)
 ;;Value: 1
+(begin (void))
+;;Value: #<void>
 (begin (void) (cons 1 2) #t)
 ;;Value: #t
 ```
@@ -437,7 +491,7 @@ R = 119
 
 1. 变量名可以包含大小写字母（`Scheme` 对大小写敏感）、数字以及 ``?!.+-*/<=>:$%&_~@`` 中的字符。在本次大作业中，我们规定：
 2. 变量名的第一个字符不能为数字或者 ``.@ ``
-3. 如果字符串可以被识别为一个数字，那么它会被优先识别为数字，例如 `1、-1、+123、.123、+124.、1e-3`
+3. 如果字符串可以被识别为一个数字，那么它会被优先识别为数字，例如 `1、-1、+123`
 4. 当该变量在当前作用域未定义时，你的解释器应当输出 `RuntimeError`
 5. 变量名可以与 `primitives`、`reserve_words` 重合
 6. 变量名中的字符可以为除了 ``#``、``'``、``"``、` 任意非空白字符，但第一个字符不能为数字
@@ -473,6 +527,8 @@ undefined ;;Value: undefined 变量在当前作用域未定义
 ((lambda (x y) (* x y)) 10 11)
 ;;Value: 110
 ```
+
+注意这里的 `procedure` 如果包含多个表达式，你需要从左到右依次执行.
 
 #### 变量与函数的定义
 
@@ -528,6 +584,8 @@ undefined ;;Value: undefined 变量在当前作用域未定义
 
 上述过程中，我们保证所有的 `define` 都在全局环境中；不会出现 `define` 内嵌套在 `begin`,`define`,`let` 等可能出现创建局部环境的情况.
 
+注意这里的第二个参数如果包含多个表达式，你需要从左到右依次执行.
+
 ----
 
 ### Subtask 5：变量的绑定与赋值
@@ -550,7 +608,7 @@ undefined ;;Value: undefined 变量在当前作用域未定义
 ```Scheme
 (let ((p1 v1) (p2 v2) ...) body)
 ```
-在这一过程中,声明了变量 `p1、p2、...`，并分别为它们赋初值 `v1、v2、...`（`v1 v2...` 可以是表达式）；`body` 由任意多个 S- 表达式构成。变量的作用域为 `body`.`let` 表达式的结果是在 `body` 中对 `body` 内的表达式进行求值.
+在这一过程中,声明了变量 `p1、p2、...`，并分别为它们赋初值 `v1、v2、...`（`v1 v2...` 可以是表达式）；`body` 由任意多个 S- 表达式构成。变量的作用域为 `body`.`let` 表达式的结果是在 `body` 中对 `body` 内的表达式进行求值; 注意这里的 `body` 如果包含多个表达式，你需要从左到右依次执行.
 
 本质上，
 ```Scheme
@@ -593,7 +651,7 @@ undefined ;;Value: undefined 变量在当前作用域未定义
 ```
 例 4: 这里的变量绑定与 `var` 要求相同，支持 `primitives` 与 `reserved_words`;
 ```Scheme
-let (((+ 1)) +)
+(let ((+ 1)) +)
 ;;Value: 1
 (let ((+ -)) (+ 2 1))
 ;;Value: 1
@@ -777,7 +835,9 @@ tree
 
 特别感谢 `CS61A` 对这个项目的启发.
 
-感谢 2025 级黄捷航为本项目作出了巨大的贡献，巨大的牺牲，巨大的 carry。
+感谢 2025 级黄捷航、王齐一为本项目作出了巨大的贡献，巨大的牺牲，巨大的 carry 无敌了，无敌了。
+
+感谢 2025 级彭徐阳为这个项目中的众多勘误提出了宝贵的修改意见。
 
 感谢 2024 级宋张驰、李徐砚、刘宇轩、王瑞涵为本项目审核与评价。
 
