@@ -105,13 +105,13 @@ Value VoidV() {
 }
 
 // Integer
-Integer::Integer(int n) : ValueBase(V_INT), n(n) {}
+Integer::Integer(int n) : ValueBase(V_INT), n(n) {} // 他就是一个数据
 
-void Integer::show(std::ostream &os) {
+void Integer::show(std::ostream &os) { // 输出方法
     os << n;
 }
 
-Value IntegerV(int n) {
+Value IntegerV(int n) { // 相当于从一个结果（应该说是别人的数据成员）输出一个 Integer的value（保持抽象）
     return Value(new Integer(n));
 }
 

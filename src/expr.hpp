@@ -23,6 +23,8 @@ public:
 #include <cstring>
 #include <vector>
 
+// int gcd(int a, int b);
+
 struct ExprBase{
     ExprType e_type;
     ExprBase(ExprType);
@@ -130,7 +132,7 @@ struct Variadic : ExprBase {
 //                             ARITHMETIC OPERATIONS
 // ================================================================================
 
-struct Plus : Binary {
+struct Plus : Binary { // Question：包不包含有理数呢？反正就是这里的 Evalrator都要实现
     Plus(const Expr &, const Expr &);
     virtual Value evalRator(const Value &, const Value &) override;
 };

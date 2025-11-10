@@ -63,7 +63,7 @@ struct StringSyntax : SyntaxBase {
 };
 
 struct List : SyntaxBase {
-    std::vector<Syntax> stxs;
+    std::vector<Syntax> stxs; // stxs[i].get()指向一个Syntaxbase
     List();
     virtual Expr parse(Assoc &) override;
     virtual void show(std::ostream &) override;

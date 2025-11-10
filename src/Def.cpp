@@ -111,5 +111,5 @@ std::map<std::string, ExprType> reserved_words = {
     {"letrec",  E_LETREC},   
     
     // Assignment
-    {"set!",    E_SET}      
+    {"set!",    E_SET}, 
 };

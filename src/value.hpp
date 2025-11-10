@@ -69,9 +69,9 @@ struct AssocList {
 
 // Environment operations
 Assoc empty();
-Assoc extend(const std::string&, const Value &, Assoc &);
-void modify(const std::string&, const Value &, Assoc &);
-Value find(const std::string &, Assoc &);
+Assoc extend(const std::string&, const Value &, Assoc &); // 在旧环境 extend 建立一个新环境
+void modify(const std::string&, const Value &, Assoc &); // （基于 Set!）在当前环境中找到变量并修改，相应的 set-car!，set-cdr!会修改一个pair的这些部分
+Value find(const std::string &, Assoc &); // 不断往回找变量
 
 // ============================================================================
 // Simple Value Types

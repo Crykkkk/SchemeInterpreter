@@ -134,7 +134,7 @@ Syntax createIdentifierSyntax(const std::string &s) {
 Syntax readItem(std::istream &is) {
   if (is.peek() == '(' || is.peek() == '[') {
     is.get();
-    return readList(is);
+    return readList(is); // 续215行，Readlist是最基本的东西，只要第一个是(就会开始使用List
   }
   if (is.peek() == '\'')
   {
@@ -212,7 +212,7 @@ Syntax readList(std::istream &is) {
         stx->stxs.push_back(readItem(is));
     is.get(); // ')'
     return Syntax(stx);
-}
+} // 这里介绍了，readList和list的parser是最基本的内容。原因见上
 
 Syntax readSyntax(std::istream &is) {
   return readItem(readSpace(is));
