@@ -15,10 +15,13 @@
 #include "syntax.hpp"
 #include <algorithm>
 #include <cstring>
+#include <iostream>
 #include <numeric>
+#include <ostream>
 #include <vector>
 #include <map>
 #include <climits>
+#include <string>
 
 extern std::map<std::string, ExprType> primitives;
 extern std::map<std::string, ExprType> reserved_words;
@@ -87,7 +90,6 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
     //When a variable is not defined in the current scope, your interpreter should output RuntimeError
     
     Value matched_value = find(x, e);
-    std::cout << "yes it's a var's eval" << std::endl;
     if (matched_value.get() == nullptr) {
         if (primitives.count(x)) {
              static std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
@@ -476,7 +478,6 @@ Value ListFunc::evalRator(const std::vector<Value> &args) { // list function
         my_pair = PairV(args[i], my_pair);
     }
     return my_pair;
-
 }
 
 Value IsList::evalRator(const Value &rand) { // list?
@@ -569,8 +570,7 @@ Value Begin::eval(Assoc &e) {
     //TODO: To complete the begin logic
 }
 
-Value Quote::eval(Assoc& e) {
-    //TODO: To complete the quote logic
+Value Helper(Syntax s){
     if (dynamic_cast<Number*>(s.get()) != nullptr) {
         return IntegerV(dynamic_cast<Number*>(s.get())->n);
     }
@@ -585,22 +585,47 @@ Value Quote::eval(Assoc& e) {
         return StringV(dynamic_cast<StringSyntax*>(s.get())->s);
     }
     if (dynamic_cast<TrueSyntax*>(s.get()) != nullptr) {
-        std::cout << "True" << std::endl;
         return BooleanV(true);
     }
     if (dynamic_cast<FalseSyntax*>(s.get()) != nullptr) {
         return BooleanV(false);
     }
     if (dynamic_cast<List*>(s.get()) != nullptr) {
-        // 这个时候比较复杂，大概需要考虑正经List和pair两种情况
         List* this_list = dynamic_cast<List*>(s.get());
         int i = this_list->stxs.size();
         if (!i) {
             return NullV();
         }
-        // TODO，先去完成 List 函数。
-           
+        std::vector<Value> mid_list;
+        int is_pair = 0;
+        for (int j = 0; j < i; j++) { 
+            if (Helper(this_list->stxs[j])->v_type == V_SYM && dynamic_cast<Symbol*>(Helper(this_list->stxs[j]).get())->s == ".") {
+                if (is_pair == 1 || j == (i - 1) || j == 0) throw RuntimeError("Invalid dot expression"); // 难说能不能为0，会不会 . 作为一个函数？？
+                is_pair = 1;
+            }
+            else {
+                mid_list.push_back(Helper(this_list->stxs[j]));
+            }
+        }
+        if (!is_pair) {
+            std::vector<Expr> tmp;
+            ListFunc listfunctool(tmp);
+            return listfunctool.evalRator(mid_list);
+        }
+        else {
+            Value my_pair = mid_list[mid_list.size() - 1];
+            for (int i = mid_list.size() - 2; i >= 0; i--) {
+                my_pair = PairV(mid_list[i], my_pair);
+            }
+            return my_pair;
+        }
     }
+    throw RuntimeError("What is your type??");
+}
+
+Value Quote::eval(Assoc& e) {
+    //TODO: To complete the quote logic
+    return Helper(s);
 }
 
 Value AndVar::eval(Assoc &e) { // and with short-circuit evaluation

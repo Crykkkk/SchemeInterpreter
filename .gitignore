@@ -31,3 +31,5 @@
 *.app
 
 test.cpp
+build
+score

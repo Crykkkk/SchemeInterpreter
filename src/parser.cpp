@@ -36,7 +36,6 @@ Expr Number::parse(Assoc &env) { // n从何来，这个函数是 Number 类的�
 }
 
 Expr RationalSyntax::parse(Assoc &env) {
-    //TODO: complete the rational parser DONE
     if (denominator == 0) throw RuntimeError("Invalid denominator");
     else return Expr(new RationalNum(numerator, denominator));
 }
@@ -162,12 +161,52 @@ Expr List::parse(Assoc &env) {
                 return Expr(new Cdr(parameters[0]));
             }
             else throw RuntimeError("Wrong arg number for cdr");           
-        } else if (op_type == E_LISTQ) { // TODO 暂时实现不了，因为需要使用闭包，另外这里看来确实应该把所有?塞进来
+        } else if (op_type == E_LISTQ) {
             if (parameters.size() == 1) {
                 return Expr(new IsList(parameters[0]));
             }
             throw RuntimeError("Wrong arg number for list?");  
-        }
+        } else if (op_type == E_EQQ) {
+            if (parameters.size() == 2) {
+                return Expr(new IsEq(parameters[0], parameters[1]));
+            }
+            throw RuntimeError("Wrong arg number for eq?");  
+        } else if (op_type == E_BOOLQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsBoolean(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for boolean?");  
+        } else if (op_type == E_INTQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsFixnum(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for number?");  
+        } else if (op_type == E_NULLQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsNull(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for null?");  
+        } else if (op_type == E_PAIRQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsPair(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for pair?");  
+        } else if (op_type == E_PROCQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsProcedure(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for procedure?");  
+        } else if (op_type == E_SYMBOLQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsSymbol(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for symbol?");  
+        } else if (op_type == E_STRINGQ) {
+            if (parameters.size() == 1) {
+                return Expr(new IsString(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for string?");  
+        } 
         else {
             //TODO: TO COMPLETE THE LOGIC
             throw RuntimeError("What else could it be?");
