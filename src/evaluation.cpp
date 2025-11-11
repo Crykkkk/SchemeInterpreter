@@ -596,9 +596,10 @@ Value Quote::eval(Assoc& e) {
         List* this_list = dynamic_cast<List*>(s.get());
         int i = this_list->stxs.size();
         if (!i) {
-            return PairV(NullV(), NullV());
+            return NullV();
         }
-        // TODO，先去完成 List 函数。   
+        // TODO，先去完成 List 函数。
+           
     }
 }
 

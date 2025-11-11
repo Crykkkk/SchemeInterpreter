@@ -1,5 +1,6 @@
 #include "syntax.hpp"
 #include <cstring>
+#include <iostream>
 #include <vector>
 
 Syntax::Syntax(SyntaxBase *stx) : ptr(stx) {}

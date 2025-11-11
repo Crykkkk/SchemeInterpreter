@@ -61,13 +61,13 @@ Expr List::parse(Assoc &env) {
     if (stxs.empty()) {
         return Expr(new Quote(Syntax(new List())));
     }
-
     //TODO: check if the first element is a symbol
     //If not, use Apply function to package to a closure;
     //If so, find whether it's a variable or a keyword;
     SymbolSyntax *id = dynamic_cast<SymbolSyntax*>(stxs[0].get());
     if (id == nullptr) { // 基类指针无法转派生类，代表他不是symbol
         //TODO: TO COMPLETE THE LOGIC
+        
     }else{
     string op = id->s; // a string，应该是对应的syntax文本
     if (find(op, env).get() != nullptr) {
