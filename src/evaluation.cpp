@@ -481,7 +481,7 @@ Value Cons::evalRator(const Value &rand1, const Value &rand2) { // cons
 
 Value ListFunc::evalRator(const std::vector<Value> &args) { // list function
     //Done: To complete the list logic
-    if (args.size() == 0) return NullV(); // NullV 表示空表，而不是用(NullV NullV)!!
+    if (args.size() == 0) return NullV(); // NullV 表示空表
     Value my_pair = NullV();
     for (int i = args.size() - 1; i >= 0; i--) {
         my_pair = PairV(args[i], my_pair);
@@ -685,14 +685,14 @@ Value If::eval(Assoc &e) {
 }
 
 Value Cond::eval(Assoc &env) {
-    //TODO: To complete the cond logic
     for (int i = 0; i < clauses.size(); i++) {
         std::vector<Expr> this_clause = clauses[i];
-        if (this_clause[0]->eval(env)->v_type == V_BOOL && dynamic_cast<Boolean*>(this_clause[0]->eval(env).get())->b == false) {
+        Value pred = this_clause[0]->eval(env);
+        if (pred->v_type == V_BOOL && static_cast<Boolean*>(pred.get())->b == false) {
             continue;
         }
         else {
-            if (this_clause.size() == 1) return this_clause[0]->eval(env);
+            if (this_clause.size() == 1) return pred;
             else {
                 for (int j = 1; j < this_clause.size() - 1; j++) {
                     this_clause[j]->eval(env);
