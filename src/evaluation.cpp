@@ -601,21 +601,27 @@ Value Helper(Syntax s){
         if (!i) {
             return NullV();
         }
+        std::vector<Value> first_list;
         std::vector<Value> mid_list;
+        for (int j = 0; j < i; j++) {
+            first_list.push_back(Helper(this_list->stxs[j]));
+        }
         int is_pair = 0;
         for (int j = 0; j < i; j++) { 
-            if (Helper(this_list->stxs[j])->v_type == V_SYM && dynamic_cast<Symbol*>(Helper(this_list->stxs[j]).get())->s == ".") {
+            if (first_list[j]->v_type == V_SYM && dynamic_cast<Symbol*>(first_list[j].get())->s == ".") {
                 if (is_pair == 1 || j == (i - 1) || j == 0) throw RuntimeError("Invalid dot expression"); // 难说能不能为0，会不会 . 作为一个函数？？
                 is_pair = 1;
             }
             else {
-                mid_list.push_back(Helper(this_list->stxs[j]));
+                mid_list.push_back(first_list[j]);
             }
         }
         if (!is_pair) {
-            std::vector<Expr> tmp;
-            ListFunc listfunctool(tmp);
-            return listfunctool.evalRator(mid_list);
+            Value my_pair = NullV();
+            for (int i = mid_list.size() - 1; i >= 0; i--) {
+                my_pair = PairV(mid_list[i], my_pair);
+            }
+            return my_pair;
         }
         else {
             Value my_pair = mid_list[mid_list.size() - 1];
