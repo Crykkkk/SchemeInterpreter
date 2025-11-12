@@ -564,7 +564,11 @@ Value IsString::evalRator(const Value &rand) { // string?
 }
 
 Value Begin::eval(Assoc &e) {
-    //TODO: To complete the begin logic
+    if (!es.size()) return VoidV();
+    for (int j = 0; j < es.size() - 1; j++) {
+        es[j]->eval(e);
+    }
+    return es[es.size() - 1]->eval(e);
 }
 
 Value Helper(Syntax s){

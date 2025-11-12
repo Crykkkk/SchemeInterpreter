@@ -266,6 +266,14 @@ Expr List::parse(Assoc &env) {
                 }
                 return Expr(new Cond(Args));
                 break;}
+            case E_BEGIN:{
+                std::vector<Expr> begin_arg;
+                for (int i = 1; i < stxs.size(); i++) {
+                    begin_arg.push_back(stxs[i]->parse(env)); // 有时候似乎必须用->，而不能随便混过来
+                }
+                return Expr(new Begin(begin_arg));
+                break;
+            }
         	default:
             	throw RuntimeError("Unknown reserved word: " + op);
     	}
