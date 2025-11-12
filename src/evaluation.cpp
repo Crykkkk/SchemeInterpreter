@@ -680,6 +680,9 @@ Value Not::evalRator(const Value &rand) { // not
 
 Value If::eval(Assoc &e) {
     Value pred = cond->eval(e);
+    if (!pred.get()) {
+        throw RuntimeError("Evaluation of condition resulted in an invalid value");
+    }
     if (pred->v_type == V_BOOL && dynamic_cast<Boolean*>(pred.get())->b == false) {
         return (alter->eval(e));
     }
