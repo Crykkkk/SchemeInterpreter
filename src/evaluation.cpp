@@ -291,6 +291,8 @@ Value Modulo::evalRator(const Value &rand1, const Value &rand2) { // modulo
 
 Value PlusVar::evalRator(const std::vector<Value> &args) { // + with multiple args
     //DONE: To complete the addition logic
+    if (args.empty()) return IntegerV(0);
+    if (args.size() == 1) return args[0];
     Value a = args[0];
     Value b = NULL;
     struct Plus plustool(NULL, NULL);
@@ -302,9 +304,11 @@ Value PlusVar::evalRator(const std::vector<Value> &args) { // + with multiple ar
 }
 
 Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple args
+    if (args.empty()) throw RuntimeError("invalid arg num");
     Value a = args[0];
     Value b = NULL;
     struct Minus minustool(NULL, NULL);
+    if (args.size() == 1) return minustool.evalRator(IntegerV(0), a);
     for (int i = 1; i < args.size(); i++) {
         b = args[i];
         a = minustool.evalRator(a, b);
@@ -313,6 +317,8 @@ Value MinusVar::evalRator(const std::vector<Value> &args) { // - with multiple a
 }
 
 Value MultVar::evalRator(const std::vector<Value> &args) { // * with multiple args
+    if (args.empty()) return IntegerV(1);
+    if (args.size() == 1) return args[0];
     Value a = args[0];
     Value b = NULL;
     struct Mult multtool(NULL, NULL);
@@ -324,9 +330,11 @@ Value MultVar::evalRator(const std::vector<Value> &args) { // * with multiple ar
 }
 
 Value DivVar::evalRator(const std::vector<Value> &args) { // / with multiple args
+    if (args.empty()) throw RuntimeError("Invalid arg num");
     Value a = args[0];
     Value b = NULL;
     struct Div divtool(NULL, NULL);
+    if (args.size() == 1) return divtool.evalRator(IntegerV(1), a);
     for (int i = 1; i < args.size(); i++) {
         b = args[i];
         a = divtool.evalRator(a, b);
