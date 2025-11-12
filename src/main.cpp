@@ -42,6 +42,7 @@ bool isExplicitVoidCall(Expr expr) {
             }
         }
     }
+
     return false;
 }
 
@@ -59,7 +60,10 @@ void REPL(){
             Value val = expr -> eval(global_env);
             if (val -> v_type == V_TERMINATE)
                 break;
-            val -> show(std :: cout); // value print
+            if (val -> v_type == V_VOID) {
+                if (isExplicitVoidCall(expr)) val.show(std :: cout);
+            }
+            else val -> show(std :: cout); // value print
         }
         catch (const RuntimeError &RE){
             // std :: cout << RE.message();

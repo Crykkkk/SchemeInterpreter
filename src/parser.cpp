@@ -15,6 +15,7 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <vector>
 
 #define mp make_pair
 using std::string;
@@ -146,6 +147,11 @@ Expr List::parse(Assoc &env) {
             return Expr(new AndVar(parameters));
         } else if (op_type == E_OR) {
             return Expr(new OrVar(parameters));
+        } else if (op_type == E_NOT) {
+            if (parameters.size() == 1) {
+                return Expr(new Not(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for not");
         } else if (op_type == E_CONS) {
             if (parameters.size() == 2) {
                 return Expr(new Cons(parameters[0], parameters[1]));
@@ -206,7 +212,22 @@ Expr List::parse(Assoc &env) {
                 return Expr(new IsString(parameters[0]));
             }
             throw RuntimeError("Wrong arg number for string?");  
-        } 
+        } else if (op_type == E_VOID) {
+            if (parameters.size() == 0) {
+                return Expr(new MakeVoid());
+            }
+            throw RuntimeError("Wrong arg number for void");
+        } else if (op_type == E_DISPLAY) {
+            if (parameters.size() == 1) {
+                return Expr(new Display(parameters[0]));
+            }
+            throw RuntimeError("Wrong arg number for display");
+        } else if (op_type == E_EXIT) {
+            if (parameters.size() == 0) {
+                return Expr(new Exit());
+            }
+            throw RuntimeError("Wrong arg number for Exit");
+        }
         else {
             //TODO: TO COMPLETE THE LOGIC
             throw RuntimeError("What else could it be?");
@@ -215,11 +236,36 @@ Expr List::parse(Assoc &env) {
 
     if (reserved_words.count(op) != 0) {
     	switch (reserved_words[op]) {
-			//TODO: TO COMPLETE THE reserve_words PARSER LOGIC
+			//TODO: TO COMPLETE THE reserve_words PARSER LOGIC 注意这里的 stxs 是 1-base
             case E_QUOTE:
                 if (stxs.size() != 2) throw RuntimeError("Invalid quote format");
                 return Expr(new Quote(stxs[1]));
                 break;
+            case E_IF:
+                if (stxs.size() != 4) throw RuntimeError("Invalid if format");
+                return Expr(new If(stxs[1]->parse(env), stxs[2]->parse(env), stxs[3]->parse(env)));
+                break;
+            case E_COND:{
+                if (stxs.size() == 1) throw RuntimeError("Wrong arg num for Cond"); // 第一个是 cond 本身
+                std::vector<std::vector<Expr>> Args;
+                for (int i = 1; i < stxs.size(); i++) {
+                    List* argi = dynamic_cast<List*>(stxs[i].get());
+                    if (argi == nullptr) throw RuntimeError("Wrong arg format for Cond");
+                    vector<Expr> argi_v;
+                    SymbolSyntax* maybe_else = dynamic_cast<SymbolSyntax*>(argi->stxs[0].get());
+                    if (maybe_else != nullptr && maybe_else->s == "else" && find("else", env).get() == nullptr) {
+                        if (i != stxs.size() - 1) throw RuntimeError("else must be last clause");
+                        if (argi->stxs.size() == 1) throw RuntimeError("else must has a else clause");
+                        else argi_v.push_back(TrueSyntax().parse(env)); // 如果真的是else就直接放个true
+                    }
+                    else argi_v.push_back(argi->stxs[0]->parse(env));
+                    for (int j = 1; j < argi->stxs.size(); j++) {
+                        argi_v.push_back(argi->stxs[j]->parse(env));
+                    }
+                    Args.push_back(argi_v);
+                }
+                return Expr(new Cond(Args));
+                break;}
         	default:
             	throw RuntimeError("Unknown reserved word: " + op);
     	}

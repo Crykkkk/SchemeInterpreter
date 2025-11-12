@@ -153,7 +153,6 @@ Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
         return (ret_d == 1 ? IntegerV(ret_n) : (RationalV(ret_n, ret_d)));
         // 理论上来说这个时候分母肯定是正的
     }
-    //TODO: To complete the addition logic
     throw(RuntimeError("Wrong typename"));
 }
 
@@ -400,7 +399,6 @@ int compareNumericValues(const Value &v1, const Value &v2) {
 }
 
 Value Less::evalRator(const Value &rand1, const Value &rand2) { // < // 需要使用上面的compare函数简单化问题
-    //TODO: To complete the less logic DONE
     int ans = compareNumericValues(rand1, rand2);
     return (BooleanV(ans == -1));
 }
@@ -466,7 +464,6 @@ Value GreaterVar::evalRator(const std::vector<Value> &args) { // > with multiple
 }
 
 Value Cons::evalRator(const Value &rand1, const Value &rand2) { // cons
-    //TODO: To complete the cons logic
     return (PairV(rand1, rand2));
 }
 
@@ -624,28 +621,65 @@ Value Helper(Syntax s){
 }
 
 Value Quote::eval(Assoc& e) {
-    //TODO: To complete the quote logic
+    //DONE: To complete the quote logic
     return Helper(s);
 }
 
 Value AndVar::eval(Assoc &e) { // and with short-circuit evaluation
-    //TODO: To complete the and logic
+    if (!rands.size()) return BooleanV(true);
+    for (int i = 0; i < rands.size(); i++) {
+        if (rands[i]->eval(e)->v_type == V_BOOL && dynamic_cast<Boolean*>(rands[i]->eval(e).get())->b == false) {
+            return BooleanV(false);
+        }
+    }
+    return rands[rands.size()-1]->eval(e);
 }
 
 Value OrVar::eval(Assoc &e) { // or with short-circuit evaluation
-    //TODO: To complete the or logic
+    if (!rands.size()) return BooleanV(false);
+    for (int i = 0; i < rands.size(); i++) {
+        if (rands[i]->eval(e)->v_type == V_BOOL && dynamic_cast<Boolean*>(rands[i]->eval(e).get())->b == false) {
+            continue;
+        }
+        return rands[i]->eval(e);
+    }
+    return BooleanV(false);
 }
 
 Value Not::evalRator(const Value &rand) { // not
-    //TODO: To complete the not logic
+    if (rand->v_type == V_BOOL && dynamic_cast<Boolean*>(rand.get())->b == false) {
+        return BooleanV(true);
+    }
+    else return BooleanV(false);
 }
 
 Value If::eval(Assoc &e) {
-    //TODO: To complete the if logic
+    if (cond->eval(e)->v_type == V_BOOL && dynamic_cast<Boolean*>(cond->eval(e).get())->b == false) {
+        return (alter->eval(e));
+    }
+    else {
+        return (conseq->eval(e));
+    }
 }
 
 Value Cond::eval(Assoc &env) {
     //TODO: To complete the cond logic
+    for (int i = 0; i < clauses.size(); i++) {
+        std::vector<Expr> this_clause = clauses[i];
+        if (this_clause[0]->eval(env)->v_type == V_BOOL && dynamic_cast<Boolean*>(this_clause[0]->eval(env).get())->b == false) {
+            continue;
+        }
+        else {
+            if (this_clause.size() == 1) return this_clause[0]->eval(env);
+            else {
+                for (int j = 1; j < this_clause.size() - 1; j++) {
+                    this_clause[j]->eval(env);
+                }
+                return this_clause[this_clause.size() - 1]->eval(env);
+            }
+        }
+    }
+    return VoidV();
 }
 
 Value Lambda::eval(Assoc &env) { 
@@ -665,7 +699,7 @@ Value Apply::eval(Assoc &e) {
     }
     if (args.size() != clos_ptr->parameters.size()) throw RuntimeError("Wrong number of arguments");
     
-    //TODO: TO COMPLETE THE PARAMETERS' ENVIRONMENT LOGIC
+    //: TO COMPLETE THE PARAMETERS' ENVIRONMENT LOGIC
     Assoc param_env = NULL; // 同上，乱写
 
     return clos_ptr->e->eval(param_env);
