@@ -232,6 +232,7 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
     if (rand1->v_type == V_INT && rand2->v_type == V_INT) {
         int a = dynamic_cast<Integer*>(rand1.get())->n;
         int b = dynamic_cast<Integer*>(rand2.get())->n;
+        if (!b) throw RuntimeError("division with 0");
         int t = gcd(a, b);
         a /= t; b /= t;
         return (b == 1 ? IntegerV(a) : (RationalV(a, b)));
@@ -240,6 +241,7 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
         int INT = dynamic_cast<Integer*>(rand1.get())->n;
         int Frac_d = dynamic_cast<Rational*>(rand2.get())->denominator;
         int Frac_n = dynamic_cast<Rational*>(rand2.get())->numerator;
+        if (!Frac_n) throw RuntimeError("division with 0");
         int ret_d = Frac_n;
         int ret_n = INT * Frac_d;
         int t = gcd(ret_d, ret_n);
@@ -251,6 +253,7 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
         int Frac_n = dynamic_cast<Rational*>(rand1.get())->numerator;
         int Frac_d = dynamic_cast<Rational*>(rand1.get())->denominator;
         int INT = dynamic_cast<Integer*>(rand2.get())->n;
+        if (!INT) throw RuntimeError("division with 0");
         int ret_d = Frac_d * INT;
         int ret_n = Frac_n;
         int t = gcd(ret_d, ret_n);
@@ -263,6 +266,7 @@ Value Div::evalRator(const Value &rand1, const Value &rand2) { // /
         int Ra1_n = dynamic_cast<Rational*>(rand1.get())->numerator;
         int Ra2_d = dynamic_cast<Rational*>(rand2.get())->denominator;
         int Ra2_n = dynamic_cast<Rational*>(rand2.get())->numerator;
+        if (!Ra2_n) throw RuntimeError("division with 0");
         int ret_d = Ra1_d * Ra2_n;
         int ret_n = Ra1_n * Ra2_d;
         int t = gcd(ret_n, ret_d);
