@@ -503,7 +503,6 @@ Value IsList::evalRator(const Value &rand) { // list?
 }
 
 Value Car::evalRator(const Value &rand) { // car
-    //Done: To complete the car logic
     if (rand->v_type == V_PAIR) {
         return (dynamic_cast<Pair*>(rand.get())->car);
     }
@@ -649,21 +648,25 @@ Value Quote::eval(Assoc& e) {
 
 Value AndVar::eval(Assoc &e) { // and with short-circuit evaluation
     if (!rands.size()) return BooleanV(true);
+    Value this_val = NULL;
     for (int i = 0; i < rands.size(); i++) {
-        if (rands[i]->eval(e)->v_type == V_BOOL && dynamic_cast<Boolean*>(rands[i]->eval(e).get())->b == false) {
+        this_val = rands[i]->eval(e);
+        if (this_val->v_type == V_BOOL && dynamic_cast<Boolean*>(this_val.get())->b == false) {
             return BooleanV(false);
         }
     }
-    return rands[rands.size()-1]->eval(e);
+    return this_val;
 }
 
 Value OrVar::eval(Assoc &e) { // or with short-circuit evaluation
     if (!rands.size()) return BooleanV(false);
+    Value this_val = NULL;
     for (int i = 0; i < rands.size(); i++) {
-        if (rands[i]->eval(e)->v_type == V_BOOL && dynamic_cast<Boolean*>(rands[i]->eval(e).get())->b == false) {
+        this_val = rands[i]->eval(e);
+        if (this_val->v_type == V_BOOL && dynamic_cast<Boolean*>(this_val.get())->b == false) {
             continue;
         }
-        return rands[i]->eval(e);
+        return this_val;
     }
     return BooleanV(false);
 }
@@ -676,7 +679,8 @@ Value Not::evalRator(const Value &rand) { // not
 }
 
 Value If::eval(Assoc &e) {
-    if (cond->eval(e)->v_type == V_BOOL && dynamic_cast<Boolean*>(cond->eval(e).get())->b == false) {
+    Value pred = cond->eval(e);
+    if (pred->v_type == V_BOOL && dynamic_cast<Boolean*>(pred.get())->b == false) {
         return (alter->eval(e));
     }
     else {
@@ -694,10 +698,11 @@ Value Cond::eval(Assoc &env) {
         else {
             if (this_clause.size() == 1) return pred;
             else {
-                for (int j = 1; j < this_clause.size() - 1; j++) {
-                    this_clause[j]->eval(env);
+                Value this_val = NULL;
+                for (int j = 1; j < this_clause.size(); j++) {
+                    this_val = this_clause[j]->eval(env);
                 }
-                return this_clause[this_clause.size() - 1]->eval(env);
+                return this_val;
             }
         }
     }
