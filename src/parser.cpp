@@ -67,15 +67,24 @@ Expr List::parse(Assoc &env) {
     SymbolSyntax *id = dynamic_cast<SymbolSyntax*>(stxs[0].get());
     if (id == nullptr) { // 基类指针无法转派生类，代表他不是symbol
         //TODO: TO COMPLETE THE LOGIC
-        
-    }else{
+        vector<Expr> parameters; 
+        for (int i = 1; i < stxs.size(); i++) {
+            parameters.push_back(stxs[i]->parse(env));
+        }
+        return (new Apply(stxs[0]->parse(env), parameters));
+    }
+    else{
     string op = id->s; // a string，应该是对应的syntax文本
     if (find(op, env).get() != nullptr) {
         //TODO: TO COMPLETE THE PARAMETER PARSER LOGIC
+        vector<Expr> parameters; 
+        for (int i = 1; i < stxs.size(); i++) {
+            parameters.push_back(stxs[i]->parse(env));
+        }
+        return (new Apply(stxs[0]->parse(env), parameters));
     }
     if (primitives.count(op) != 0) { // map 的 count 方法，是否存在特定键的元素
         vector<Expr> parameters; 
-        //DONE: TO COMPLETE THE PARAMETER PARSER LOGICE
         for (int i = 1; i < stxs.size(); i++) {
             parameters.push_back(stxs[i]->parse(env));
         }
@@ -274,12 +283,30 @@ Expr List::parse(Assoc &env) {
                 return Expr(new Begin(begin_arg));
                 break;
             }
+            case E_LAMBDA:{
+                if (stxs.size() != 3) throw RuntimeError("Invalid arg num of lambda");
+                List* paras = dynamic_cast<List*>(stxs[1].get());
+                if (paras == nullptr) throw RuntimeError("Invalid arg format for lambda");
+                vector<string> real_paras;
+                for (int i = 0; i < paras->stxs.size(); i++) {
+                    SymbolSyntax* this_para = dynamic_cast<SymbolSyntax*>(paras->stxs[i].get());
+                    if (this_para == nullptr) throw RuntimeError("Invalid parameter format for lambda");
+                    real_paras.push_back(this_para->s);
+                }
+                Expr ld_e = stxs[2]->parse(env);
+                return (new Lambda(real_paras, ld_e));
+                break;
+            }
         	default:
             	throw RuntimeError("Unknown reserved word: " + op);
     	}
     }
-
     //default: use Apply to be an expression
     //TODO: TO COMPLETE THE PARSER LOGIC
+    vector<Expr> parameters; 
+    for (int i = 1; i < stxs.size(); i++) {
+        parameters.push_back(stxs[i]->parse(env));
+    }
+    return Expr(new Apply(stxs[0]->parse(env), parameters));
 }
 }

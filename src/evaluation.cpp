@@ -18,6 +18,8 @@
 #include <iostream>
 #include <numeric>
 #include <ostream>
+#include <set>
+#include <utility>
 #include <vector>
 #include <map>
 #include <climits>
@@ -72,12 +74,113 @@ Value Binary::eval(Assoc &e) { // evaluation of two-operators primitive
 }
 
 Value Variadic::eval(Assoc &e) { // evaluation of multi-operator primitive
-    // TODO: TO COMPLETE THE VARIADIC CLASS DONE
     std::vector<Value> eval_outcome;
-    for (int i = 0; i < rands.size(); i++) {
-        eval_outcome.push_back(rands[i]->eval(e));
+    if (!rands.empty()) {
+        for (int i = 0; i < rands.size(); i++) {
+            eval_outcome.push_back(rands[i]->eval(e));
+        }
+        return evalRator(eval_outcome);
+    }
+    Value arg_list = find("@args", e);
+    if (arg_list.get() == nullptr) {
+        return evalRator(eval_outcome); 
+    }
+    // 找到了 @args，说明是 apply 调用，开始解包
+    Value current = arg_list;
+    while (current->v_type == V_PAIR) {
+        Pair* p = dynamic_cast<Pair*>(current.get());
+        eval_outcome.push_back(p->car);
+        current = p->cdr;
     }
     return evalRator(eval_outcome);
+}
+
+// HELPER FUNCTION OF CONVERTING TO NUMBER
+std::pair<bool, std::pair<int, int>> parse_rational(const std::string &s) {
+    int n = s.size();
+    int i = 0;
+    int sign = 1;
+
+    // optional sign
+    if (s[i] == '+') i++;
+    else if (s[i] == '-') sign = -1, i++;
+
+    if (i >= n) return {false, {0,1}};
+
+    // integer part
+    long long int_part = 0;
+    bool has_int = false;
+
+    while (i < n && isdigit(s[i])) {
+        has_int = true;
+        int_part = int_part * 10 + (s[i] - '0');
+        i++;
+    }
+
+    // fractional part
+    long long frac_part = 0;
+    long long frac_den = 1;
+    bool has_frac = false;
+
+    if (i < n && s[i] == '.') {
+        i++;
+        while (i < n && isdigit(s[i])) {
+            has_frac = true;
+            frac_part = frac_part * 10 + (s[i] - '0');
+            frac_den *= 10;
+            i++;
+        }
+    }
+
+    // scientific notation
+    long long exp_val = 0;
+    int exp_sign = 1;
+
+    if (i < n && (s[i] == 'e' || s[i] == 'E')) {
+        i++;
+        if (i < n && (s[i] == '+' || s[i] == '-')) {
+            exp_sign = (s[i] == '-') ? -1 : 1;
+            i++;
+        }
+        if (i >= n || !isdigit(s[i])) return {false, {0,1}};
+        while (i < n && isdigit(s[i])) {
+            exp_val = exp_val * 10 + (s[i] - '0');
+            i++;
+        }
+    }
+
+    // no stray characters
+    if (i != n) return {false, {0,1}};
+
+    if (!has_int && !has_frac) return {false, {0,1}};
+
+    // Build rational: (int_part + frac_part/frac_den) * 10^(exp_sign * exp_val)
+    long long num = int_part * frac_den + frac_part;
+    long long den = frac_den;
+
+    // apply exponent
+    long long e = exp_val;
+
+    if (exp_sign == 1) {
+        while (e--) {
+            num *= 10;
+        }
+    } else {
+        while (e--) {
+            den *= 10;
+        }
+    }
+
+    num *= sign;
+    int Gcd = gcd(num, den);
+    num /= Gcd;
+    den /= Gcd;
+    if (den < 0) {
+      num = -num;
+      den = -den;
+    }
+    
+    return {true, {num, den}};
 }
 
 Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
@@ -88,9 +191,24 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
     //Variable names can overlap with primitives and reserve_words
     //Variable names can contain any non-whitespace characters except #, ', ", `, but the first character cannot be a digit
     //When a variable is not defined in the current scope, your interpreter should output RuntimeError
-    
+    if (!x.size()) throw RuntimeError("the var should not be a blank");
+
+    std::set<char> invalid_first = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '@'};
+    if (invalid_first.find(x[0]) != invalid_first.end()) throw RuntimeError("the first character of var is invalid");
+    for (int i = 0; i < x.size(); i++) {
+        if (x[i] == '#' || x[i] == '\'' || x[i] == '\"' || x[i] == '`') throw RuntimeError("the var cannot contain invalid char");
+    }
+    // try to convert to number
+    auto try_convert = parse_rational(x);
+    if (try_convert.first) {
+        if (try_convert.second.second == 1) return IntegerV(try_convert.second.first);
+        return RationalV(try_convert.second.first, try_convert.second.second);
+    }
+    // 这时候不行了，那么BAN第一个字符为数字
+    if (isdigit(x[0])) throw RuntimeError("Cannot convert to a number but start with number char");
+
     Value matched_value = find(x, e);
-    if (matched_value.get() == nullptr) {
+    if (matched_value.get() == nullptr) { // 没被定义的情况
         if (primitives.count(x)) {
              static std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
                     {E_VOID,     {new MakeVoid(), {}}},
@@ -102,12 +220,12 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
                     {E_PROCQ,    {new IsProcedure(new Var("parm")), {"parm"}}},
                     {E_SYMBOLQ,  {new IsSymbol(new Var("parm")), {"parm"}}},
                     {E_STRINGQ,  {new IsString(new Var("parm")), {"parm"}}},
-                    // 不确定要不要加一个 E_LISTQ，应该是要加的
+                    // 不确定要不要加一个 E_LISTQ
                     {E_DISPLAY,  {new Display(new Var("parm")), {"parm"}}},
-                    {E_PLUS,     {new PlusVar({}),  {}}}, // 只要 plus 就都是E_plus，但是就需要考虑这是对谁的
-                    {E_MINUS,    {new MinusVar({}), {}}},
-                    {E_MUL,      {new MultVar({}),  {}}},
-                    {E_DIV,      {new DivVar({}),   {}}},
+                    {E_PLUS,     {new PlusVar({}),  {"@args"}}}, // 只要 plus 就都是E_plus，但是就需要考虑这是对谁的
+                    {E_MINUS,    {new MinusVar({}), {"@args"}}},
+                    {E_MUL,      {new MultVar({}),  {"@args"}}},
+                    {E_DIV,      {new DivVar({}),   {"@args"}}},
                     {E_MODULO,   {new Modulo(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
                     {E_EXPT,     {new Expt(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
                     {E_EQQ,      {new EqualVar({}), {}}},
@@ -117,11 +235,14 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
             //TOD0:to PASS THE parameters correctly;
             //COMPLETE THE CODE WITH THE HINT IN IF SENTENCE WITH CORRECT RETURN VALUE
             if (it != primitive_map.end()) {
-                //TODO
+                auto proto = it->second;
+                Assoc empty_env = empty();
+                return ProcedureV(proto.second, proto.first, empty_env);
             }
-      }
+        }
+        throw RuntimeError("The variable is not define in the scope"); // 环境里也没有，也不是保留字
     }
-    return matched_value;
+    return matched_value; //已经定义过了的情况
 }
 
 Value Plus::evalRator(const Value &rand1, const Value &rand2) { // +
@@ -714,24 +835,37 @@ Value Cond::eval(Assoc &env) {
 
 Value Lambda::eval(Assoc &env) { 
     //TODO: To complete the lambda logic
+    return ProcedureV(x, e, env);
 }
 
 Value Apply::eval(Assoc &e) {
-    if (rator->eval(e)->v_type != V_PROC) {throw RuntimeError("Attempt to apply a non-procedure");}
-
+    Value proc_val = rator->eval(e); // 这是好习惯，没这么搞导致了 core dumped
+    if (proc_val->v_type != V_PROC) {throw RuntimeError("Attempt to apply a non-procedure");}
     //TODO: TO COMPLETE THE CLOSURE LOGIC
-    Procedure* clos_ptr = nullptr; // 这里乱写的，为了可以先出点东西
+    Procedure* clos_ptr = dynamic_cast<Procedure*>(proc_val.get()); 
     
     //TODO: TO COMPLETE THE ARGUMENT PARSER LOGIC
     std::vector<Value> args;
+    for (int i = 0; i < rand.size(); i++) {
+        args.push_back(rand[i]->eval(e));
+    }
     if (auto varNode = dynamic_cast<Variadic*>(clos_ptr->e.get())) {
-        //TODO
+        //TODO 这时候就是procedure接受一个任意量数据，该怎么操作？这里主要的问题是variadic需要一个vector of value，但是我不能用它extend出assoc
+        Value a = NULL;
+        Value b = NullV();
+        for (int i = args.size() - 1; i >= 0; i--) {
+            a = args[i];
+            b = PairV(a, b);
+        }
+        args.clear();
+        args.push_back(b);
     }
     if (args.size() != clos_ptr->parameters.size()) throw RuntimeError("Wrong number of arguments");
-    
     //: TO COMPLETE THE PARAMETERS' ENVIRONMENT LOGIC
-    Assoc param_env = NULL; // 同上，乱写
-
+    Assoc param_env = clos_ptr->env; // 用的是proc的env
+    for (int i = 0; i < args.size(); i++) {
+        param_env = extend(clos_ptr->parameters[i], args[i], param_env);
+    } 
     return clos_ptr->e->eval(param_env);
 }
 
