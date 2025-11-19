@@ -30,6 +30,5 @@
 *.exe
 *.app
 
-test.cpp
+test
 build
-score
