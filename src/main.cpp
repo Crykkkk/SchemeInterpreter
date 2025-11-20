@@ -3,6 +3,7 @@
 #include "expr.hpp"
 #include "value.hpp"
 #include "RE.hpp"
+#include <iterator>
 #include <sstream>
 #include <iostream>
 #include <map>
@@ -66,7 +67,7 @@ void REPL(){
             else val -> show(std :: cout); // value print
         }
         catch (const RuntimeError &RE){
-            // std :: cout << RE.message();
+            std :: cout << "DEBUG: " << RE.message() << std::endl;
             std :: cout << "RuntimeError";
         }
         puts("");

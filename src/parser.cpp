@@ -62,9 +62,6 @@ Expr List::parse(Assoc &env) {
     if (stxs.empty()) {
         return Expr(new Quote(Syntax(new List())));
     }
-    //TODO: check if the first element is a symbol
-    //If not, use Apply function to package to a closure;
-    //If so, find whether it's a variable or a keyword;
     SymbolSyntax *id = dynamic_cast<SymbolSyntax*>(stxs[0].get());
     if (id == nullptr) { // 基类指针无法转派生类，代表他不是symbol
         //TODO: TO COMPLETE THE LOGIC
@@ -89,8 +86,8 @@ Expr List::parse(Assoc &env) {
         for (int i = 1; i < stxs.size(); i++) {
             parameters.push_back(stxs[i]->parse(env));
         }
+        // return (new Apply(stxs[0]->parse(env), parameters));
         ExprType op_type = primitives[op];
-        
         if (op_type == E_PLUS) { 
             // Done：完成四则运算，比较与任意参数Ver
             if (parameters.size() == 2) {
@@ -243,7 +240,6 @@ Expr List::parse(Assoc &env) {
             throw RuntimeError("What else could it be?");
         }
     }
-
     if (reserved_words.count(op) != 0) {
     	switch (reserved_words[op]) {
 			//TODO: TO COMPLETE THE reserve_words PARSER LOGIC 注意这里的 stxs 是 1-base
@@ -342,7 +338,7 @@ Expr List::parse(Assoc &env) {
                 if (!param_lst) throw RuntimeError("invalid param format for let 1");
                 
                 std::vector<std::pair<std::string, Expr>> bind;
-
+                vector<string> shadowed_names;
                 for (auto param : param_lst->stxs){
                     List* unpack_param = dynamic_cast<List*>(param.get());
                     if (!unpack_param) throw RuntimeError("invalid param format for let 2");
@@ -350,13 +346,17 @@ Expr List::parse(Assoc &env) {
                     SymbolSyntax* this_formal = dynamic_cast<SymbolSyntax*>(unpack_param->stxs[0].get());
                     if (this_formal == nullptr) throw RuntimeError("invalid param format for let 4");
                     bind.push_back({this_formal->s, unpack_param->stxs[1]->parse(env)});
+                    shadowed_names.push_back(this_formal->s);
                 }
-
+                
+                Assoc parse_env = env; 
+                for (const auto& name : shadowed_names) {
+                    parse_env = extend(name, VoidV(), parse_env);
+                }
                 std::vector<Expr> ld_e;
                 for (int i = 2; i < stxs.size(); i++) {
-                    ld_e.push_back(stxs[i]->parse(env));
+                    ld_e.push_back(stxs[i]->parse(parse_env));
                 }
-
                 return (new Let(bind, new Begin(ld_e)));
                 break;
             }
@@ -364,8 +364,6 @@ Expr List::parse(Assoc &env) {
             	throw RuntimeError("Unknown reserved word: " + op);
     	}
     }
-    //default: use Apply to be an expression
-    //TODO: TO COMPLETE THE PARSER LOGIC
     vector<Expr> parameters; 
     for (int i = 1; i < stxs.size(); i++) {
         parameters.push_back(stxs[i]->parse(env));

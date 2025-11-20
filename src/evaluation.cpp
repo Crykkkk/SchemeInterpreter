@@ -37,6 +37,28 @@ static int gcd(int a, int b) {
     return a;
 }
 
+static std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
+    {E_VOID,     {new MakeVoid(), {}}},
+    {E_EXIT,     {new Exit(), {}}},
+    {E_BOOLQ,    {new IsBoolean(new Var("parm")), {"parm"}}},
+    {E_INTQ,     {new IsFixnum(new Var("parm")), {"parm"}}},
+    {E_NULLQ,    {new IsNull(new Var("parm")), {"parm"}}},
+    {E_PAIRQ,    {new IsPair(new Var("parm")), {"parm"}}},
+    {E_PROCQ,    {new IsProcedure(new Var("parm")), {"parm"}}},
+    {E_SYMBOLQ,  {new IsSymbol(new Var("parm")), {"parm"}}},
+    {E_STRINGQ,  {new IsString(new Var("parm")), {"parm"}}},
+    // 不确定要不要加一个 E_LISTQ
+    {E_DISPLAY,  {new Display(new Var("parm")), {"parm"}}},
+    {E_PLUS,     {new PlusVar({}),  {"@args"}}}, // 只要 plus 就都是E_plus，但是就需要考虑这是对谁的
+    {E_MINUS,    {new MinusVar({}), {"@args"}}},
+    {E_MUL,      {new MultVar({}),  {"@args"}}},
+    {E_DIV,      {new DivVar({}),   {"@args"}}},
+    
+    {E_MODULO,   {new Modulo(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+    {E_EXPT,     {new Expt(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+    {E_EQQ,      {new EqualVar({}), {}}},
+};
+
 Value Fixnum::eval(Assoc &e) { // evaluation of a fixnum
     return IntegerV(n);
 }
@@ -184,13 +206,6 @@ std::pair<bool, std::pair<int, int>> parse_rational(const std::string &s) {
 }
 
 Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
-    // TODO: TO identify the invalid variable
-    // We request all valid variable just need to be a symbol,you should promise:
-    //The first character of a variable name cannot be a digit or any character from the set: {.@}
-    //If a string can be recognized as a number, it will be prioritized as a number. For example: 1, -1, +123, .123, +124., 1e-3
-    //Variable names can overlap with primitives and reserve_words
-    //Variable names can contain any non-whitespace characters except #, ', ", `, but the first character cannot be a digit
-    //When a variable is not defined in the current scope, your interpreter should output RuntimeError
     if (!x.size()) throw RuntimeError("the var should not be a blank");
 
     std::set<char> invalid_first = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '@'};
@@ -204,36 +219,12 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
         if (try_convert.second.second == 1) return IntegerV(try_convert.second.first);
         return RationalV(try_convert.second.first, try_convert.second.second);
     }
-    // 这时候不行了，那么BAN第一个字符为数字
     if (isdigit(x[0])) throw RuntimeError("Cannot convert to a number but start with number char");
 
     Value matched_value = find(x, e);
     if (matched_value.get() == nullptr) { // 没被定义的情况
         if (primitives.count(x)) {
-             static std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_map = {
-                    {E_VOID,     {new MakeVoid(), {}}},
-                    {E_EXIT,     {new Exit(), {}}},
-                    {E_BOOLQ,    {new IsBoolean(new Var("parm")), {"parm"}}},
-                    {E_INTQ,     {new IsFixnum(new Var("parm")), {"parm"}}},
-                    {E_NULLQ,    {new IsNull(new Var("parm")), {"parm"}}},
-                    {E_PAIRQ,    {new IsPair(new Var("parm")), {"parm"}}},
-                    {E_PROCQ,    {new IsProcedure(new Var("parm")), {"parm"}}},
-                    {E_SYMBOLQ,  {new IsSymbol(new Var("parm")), {"parm"}}},
-                    {E_STRINGQ,  {new IsString(new Var("parm")), {"parm"}}},
-                    // 不确定要不要加一个 E_LISTQ
-                    {E_DISPLAY,  {new Display(new Var("parm")), {"parm"}}},
-                    {E_PLUS,     {new PlusVar({}),  {"@args"}}}, // 只要 plus 就都是E_plus，但是就需要考虑这是对谁的
-                    {E_MINUS,    {new MinusVar({}), {"@args"}}},
-                    {E_MUL,      {new MultVar({}),  {"@args"}}},
-                    {E_DIV,      {new DivVar({}),   {"@args"}}},
-                    {E_MODULO,   {new Modulo(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_EXPT,     {new Expt(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
-                    {E_EQQ,      {new EqualVar({}), {}}},
-            };
-
             auto it = primitive_map.find(primitives[x]);
-            //TOD0:to PASS THE parameters correctly;
-            //COMPLETE THE CODE WITH THE HINT IN IF SENTENCE WITH CORRECT RETURN VALUE
             if (it != primitive_map.end()) {
                 auto proto = it->second;
                 Assoc empty_env = empty();
@@ -874,7 +865,7 @@ Value Apply::eval(Assoc &e) {
 
 Value Define::eval(Assoc &env) {
     //TODO: To complete the define logic
-    env = extend(var, Value(nullptr), env);
+    env = extend(var, VoidV(), env);
     Value v = e->eval(env);
     env->v = v;
     return Value(VoidV());

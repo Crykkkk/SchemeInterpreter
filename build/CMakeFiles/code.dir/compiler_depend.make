@@ -867,6 +867,7 @@ CMakeFiles/code.dir/src/main.cpp.o: /home/xflops/SchemeInterpreter/src/main.cpp 
   /usr/include/c++/13/bits/stl_tree.h \
   /usr/include/c++/13/bits/stl_uninitialized.h \
   /usr/include/c++/13/bits/stl_vector.h \
+  /usr/include/c++/13/bits/stream_iterator.h \
   /usr/include/c++/13/bits/streambuf.tcc \
   /usr/include/c++/13/bits/streambuf_iterator.h \
   /usr/include/c++/13/bits/stringfwd.h \
@@ -897,6 +898,7 @@ CMakeFiles/code.dir/src/main.cpp.o: /home/xflops/SchemeInterpreter/src/main.cpp 
   /usr/include/c++/13/iosfwd \
   /usr/include/c++/13/iostream \
   /usr/include/c++/13/istream \
+  /usr/include/c++/13/iterator \
   /usr/include/c++/13/map \
   /usr/include/c++/13/memory \
   /usr/include/c++/13/new \
@@ -1674,6 +1676,8 @@ CMakeFiles/code.dir/src/value.cpp.o: /home/xflops/SchemeInterpreter/src/value.cp
 
 /usr/include/c++/13/sstream:
 
+/usr/include/c++/13/iterator:
+
 /home/xflops/SchemeInterpreter/src/main.cpp:
 
 /home/xflops/SchemeInterpreter/src/expr.cpp:
@@ -1711,6 +1715,8 @@ CMakeFiles/code.dir/src/value.cpp.o: /home/xflops/SchemeInterpreter/src/value.cp
 /usr/include/c++/13/algorithm:
 
 /home/xflops/SchemeInterpreter/src/value.hpp:
+
+/usr/include/c++/13/bits/stream_iterator.h:
 
 /home/xflops/SchemeInterpreter/src/syntax.hpp:
 
