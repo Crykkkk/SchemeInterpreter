@@ -15,6 +15,7 @@
 #include <map>
 #include <string>
 #include <iostream>
+#include <utility>
 #include <vector>
 
 #define mp make_pair
@@ -284,7 +285,7 @@ Expr List::parse(Assoc &env) {
                 break;
             }
             case E_LAMBDA:{
-                if (stxs.size() != 3) throw RuntimeError("Invalid arg num of lambda");
+                if (stxs.size() < 3) throw RuntimeError("Invalid arg num of lambda");
                 List* paras = dynamic_cast<List*>(stxs[1].get());
                 if (paras == nullptr) throw RuntimeError("Invalid arg format for lambda");
                 vector<string> real_paras;
@@ -293,8 +294,70 @@ Expr List::parse(Assoc &env) {
                     if (this_para == nullptr) throw RuntimeError("Invalid parameter format for lambda");
                     real_paras.push_back(this_para->s);
                 }
-                Expr ld_e = stxs[2]->parse(env);
-                return (new Lambda(real_paras, ld_e));
+                std::vector<Expr> ld_e;
+                for (int i = 2; i < stxs.size(); i++) {
+                    ld_e.push_back(stxs[i]->parse(env));
+                }
+                return (new Lambda(real_paras, new Begin(ld_e)));
+                break;
+            }
+            case E_DEFINE:{
+                if (stxs.size() < 3) throw RuntimeError("Invalid arg num for Define");
+                if (SymbolSyntax* def_var = dynamic_cast<SymbolSyntax*>(stxs[1].get())) {
+                    if (primitives.count(def_var->s) || reserved_words.count(def_var->s)) throw RuntimeError("the var's name shouldn't be a reserved name");
+                    // 怎么实现递归？
+                    std::vector<Expr> ld_e;
+                    for (int i = 2; i < stxs.size(); i++) {
+                        ld_e.push_back(stxs[i]->parse(env));
+                    }
+                    return (new Define(def_var->s, new Begin(ld_e)));
+                }
+
+                if (List* def_var_lst = dynamic_cast<List*>(stxs[1].get())) {
+                    if (def_var_lst->stxs.size() == 0) throw RuntimeError("no argument in define's function");
+                    SymbolSyntax* def_var = dynamic_cast<SymbolSyntax*>(def_var_lst->stxs[0].get());
+                    if (def_var == nullptr) {
+                        throw RuntimeError("invalid var type for define");
+                    }
+                    if (primitives.count(def_var->s) || reserved_words.count(def_var->s)) throw RuntimeError("the var's name shouldn't be a reserved name");
+                    
+                    vector<string> lambda_paras;
+                    for (int i = 1; i < def_var_lst->stxs.size(); i++) { // 注意从第二个参数开始进lambda
+                        SymbolSyntax* this_para = dynamic_cast<SymbolSyntax*>(def_var_lst->stxs[i].get());
+                        if (this_para == nullptr) throw RuntimeError("Invalid parameter format for lambda");
+                        lambda_paras.push_back(this_para->s);                        
+                    }
+                    std::vector<Expr> lambda_expr;
+                    for (int i = 2; i < stxs.size(); i++) {
+                        lambda_expr.push_back(stxs[i]->parse(env));
+                    }
+                    return (new Define(def_var->s, new Lambda(lambda_paras,new Begin(lambda_expr))));
+                }
+                throw RuntimeError("invalid var type for define");
+                break;
+            }
+            case E_LET: {
+                if (stxs.size() <= 2) throw RuntimeError("invalid var num for LET");
+                List* param_lst = dynamic_cast<List*>(stxs[1].get());
+                if (!param_lst) throw RuntimeError("invalid param format for let 1");
+                
+                std::vector<std::pair<std::string, Expr>> bind;
+
+                for (auto param : param_lst->stxs){
+                    List* unpack_param = dynamic_cast<List*>(param.get());
+                    if (!unpack_param) throw RuntimeError("invalid param format for let 2");
+                    if (unpack_param->stxs.size() != 2) throw RuntimeError("invalid param format for let 3");
+                    SymbolSyntax* this_formal = dynamic_cast<SymbolSyntax*>(unpack_param->stxs[0].get());
+                    if (this_formal == nullptr) throw RuntimeError("invalid param format for let 4");
+                    bind.push_back({this_formal->s, unpack_param->stxs[1]->parse(env)});
+                }
+
+                std::vector<Expr> ld_e;
+                for (int i = 2; i < stxs.size(); i++) {
+                    ld_e.push_back(stxs[i]->parse(env));
+                }
+
+                return (new Let(bind, new Begin(ld_e)));
                 break;
             }
         	default:

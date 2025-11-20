@@ -871,10 +871,19 @@ Value Apply::eval(Assoc &e) {
 
 Value Define::eval(Assoc &env) {
     //TODO: To complete the define logic
+    env = extend(var, Value(nullptr), env);
+    Value v = e->eval(env);
+    env->v = v;
+    return Value(VoidV());
 }
-
 Value Let::eval(Assoc &env) {
     //TODO: To complete the let logic
+    Assoc new_env = env;  
+    for (auto &p : bind) {
+        Value val = p.second->eval(env); // 旧 env 中计算，这个跟letrec有区别
+        new_env = extend(p.first, val, new_env); 
+    }
+    return body->eval(new_env);
 }
 
 Value Letrec::eval(Assoc &env) {
