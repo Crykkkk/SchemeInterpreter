@@ -14,10 +14,13 @@
 #include <memory>
 #include <cstring>
 #include <vector>
+#include <map>
 
 // ============================================================================
 // Base classes and smart pointer wrappers
 // ============================================================================
+
+static std::map<std::string, Value> global_env;
 
 /**
  * @brief Base class for all values in the Scheme interpreter

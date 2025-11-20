@@ -206,8 +206,6 @@ std::pair<bool, std::pair<int, int>> parse_rational(const std::string &s) {
 }
 
 Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
-    if (!x.size()) throw RuntimeError("the var should not be a blank");
-
     std::set<char> invalid_first = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '@'};
     if (invalid_first.find(x[0]) != invalid_first.end()) throw RuntimeError("the first character of var is invalid");
     for (int i = 0; i < x.size(); i++) {
@@ -223,6 +221,10 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
 
     Value matched_value = find(x, e);
     if (matched_value.get() == nullptr) { // 没被定义的情况
+        auto it = global_env.find(x);
+        if (it != global_env.end()) {
+            return it->second; // 直接返回找到的值，不调用默认构造函数
+        }
         if (primitives.count(x)) {
             auto it = primitive_map.find(primitives[x]);
             if (it != primitive_map.end()) {
@@ -231,9 +233,6 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
                 return ProcedureV(proto.second, proto.first, empty_env);
             }
         }
-        // if (reserved_words.count(x)) {
-
-        // }
         throw RuntimeError("The variable is not define in the scope"); // 环境里也没有，也不是保留字
     }
     return matched_value; //已经定义过了的情况
@@ -633,10 +632,20 @@ Value Cdr::evalRator(const Value &rand) { // cdr
 
 Value SetCar::evalRator(const Value &rand1, const Value &rand2) { // set-car!
     //TODO: To complete the set-car! logic
+    if (Pair* target = dynamic_cast<Pair*>(rand1.get())) {
+        target->car = rand2;
+        return VoidV();
+    }
+    throw RuntimeError("invalid format for Setcar");
 }
 
 Value SetCdr::evalRator(const Value &rand1, const Value &rand2) { // set-cdr!
    //TODO: To complete the set-cdr! logic
+    if (Pair* target = dynamic_cast<Pair*>(rand1.get())) {
+        target->cdr = rand2;
+        return VoidV();
+    }
+    throw RuntimeError("invalid format for Setcdr");
 }
 
 Value IsEq::evalRator(const Value &rand1, const Value &rand2) { // eq?
@@ -865,27 +874,63 @@ Value Apply::eval(Assoc &e) {
 
 Value Define::eval(Assoc &env) {
     //TODO: To complete the define logic
-    env = extend(var, VoidV(), env);
+    auto it = global_env.find(var);
+    if (it != global_env.end()) {
+        it->second = Value(nullptr); 
+    } else {
+        global_env.insert({var, Value(nullptr)}); 
+    }
     Value v = e->eval(env);
-    env->v = v;
+    it = global_env.find(var);
+    if (it != global_env.end()) {
+        it->second = v;
+    } else {
+        global_env.insert({var, v});
+    }
     return Value(VoidV());
 }
+
+Value Letrec::eval(Assoc &env) {
+    //TODO: To complete the letrec logic
+    Assoc new_env = env;  
+    for (auto &p : bind) {
+        new_env = extend(p.first, Value(nullptr), new_env); 
+    }
+    std::vector<Value> values;
+    for (auto &p : bind) {
+        values.push_back(p.second->eval(new_env));
+    }
+    Assoc curr = new_env;
+    for (int i = values.size() - 1; i >= 0; i--) {
+        curr->v = values[i]; 
+        curr = curr->next;
+    }
+    return body->eval(new_env);
+}
+
 Value Let::eval(Assoc &env) {
     //TODO: To complete the let logic
     Assoc new_env = env;  
     for (auto &p : bind) {
-        Value val = p.second->eval(env); // 旧 env 中计算，这个跟letrec有区别
+        Value val = p.second->eval(env); 
         new_env = extend(p.first, val, new_env); 
     }
     return body->eval(new_env);
 }
 
-Value Letrec::eval(Assoc &env) {
-    //TODO: To complete the letrec logic
-}
-
 Value Set::eval(Assoc &env) {
-    //TODO: To complete the set logic
+    Value val = e->eval(env);
+    try {
+        modify(var, val, env);
+        return Value(VoidV()); 
+    } catch (const RuntimeError&) { 
+    }
+    auto it = global_env.find(var);
+    if (it != global_env.end()) {
+        it->second = val;
+        return Value(VoidV());
+    }
+    throw RuntimeError("DEBUG: try to set a undefined var: " + var);
 }
 
 Value Display::evalRator(const Value &rand) { // display function

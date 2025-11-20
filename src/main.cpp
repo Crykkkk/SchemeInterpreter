@@ -67,7 +67,9 @@ void REPL(){
             else val -> show(std :: cout); // value print
         }
         catch (const RuntimeError &RE){
+            // #ifndef ONLINE_JUDGE 
             // std :: cout << "DEBUG: " << RE.message() << std::endl;
+            // #endif
             std :: cout << "RuntimeError";
         }
         puts("");

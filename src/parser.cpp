@@ -234,6 +234,12 @@ Expr List::parse(Assoc &env) {
                 return Expr(new Exit());
             }
             throw RuntimeError("Wrong arg number for Exit");
+        } else if (op_type == E_SETCAR) {
+            if (stxs.size() != 3) throw RuntimeError("Wrong arg num for setcar!");
+            return (new SetCar(stxs[1]->parse(env), stxs[2]->parse(env)));
+        } else if (op_type == E_SETCDR) {
+            if (stxs.size() != 3) throw RuntimeError("Wrong arg num for setcdr!");
+            return (new SetCdr(stxs[1]->parse(env), stxs[2]->parse(env)));
         }
         else {
             //TODO: TO COMPLETE THE LOGIC
@@ -285,14 +291,16 @@ Expr List::parse(Assoc &env) {
                 List* paras = dynamic_cast<List*>(stxs[1].get());
                 if (paras == nullptr) throw RuntimeError("Invalid arg format for lambda");
                 vector<string> real_paras;
+                Assoc parse_env = env; 
                 for (int i = 0; i < paras->stxs.size(); i++) {
                     SymbolSyntax* this_para = dynamic_cast<SymbolSyntax*>(paras->stxs[i].get());
                     if (this_para == nullptr) throw RuntimeError("Invalid parameter format for lambda");
                     real_paras.push_back(this_para->s);
+                    parse_env = extend(this_para->s, VoidV(), parse_env);
                 }
                 std::vector<Expr> ld_e;
                 for (int i = 2; i < stxs.size(); i++) {
-                    ld_e.push_back(stxs[i]->parse(env));
+                    ld_e.push_back(stxs[i]->parse(parse_env));
                 }
                 return (new Lambda(real_paras, new Begin(ld_e)));
                 break;
@@ -301,7 +309,6 @@ Expr List::parse(Assoc &env) {
                 if (stxs.size() < 3) throw RuntimeError("Invalid arg num for Define");
                 if (SymbolSyntax* def_var = dynamic_cast<SymbolSyntax*>(stxs[1].get())) {
                     if (primitives.count(def_var->s) || reserved_words.count(def_var->s)) throw RuntimeError("the var's name shouldn't be a reserved name");
-                    // 怎么实现递归？
                     std::vector<Expr> ld_e;
                     for (int i = 2; i < stxs.size(); i++) {
                         ld_e.push_back(stxs[i]->parse(env));
@@ -318,14 +325,16 @@ Expr List::parse(Assoc &env) {
                     if (primitives.count(def_var->s) || reserved_words.count(def_var->s)) throw RuntimeError("the var's name shouldn't be a reserved name");
                     
                     vector<string> lambda_paras;
+                    Assoc parse_env = env;
                     for (int i = 1; i < def_var_lst->stxs.size(); i++) { // 注意从第二个参数开始进lambda
                         SymbolSyntax* this_para = dynamic_cast<SymbolSyntax*>(def_var_lst->stxs[i].get());
                         if (this_para == nullptr) throw RuntimeError("Invalid parameter format for lambda");
-                        lambda_paras.push_back(this_para->s);                        
+                        lambda_paras.push_back(this_para->s); 
+                        parse_env = extend(this_para->s, VoidV(), parse_env);                       
                     }
                     std::vector<Expr> lambda_expr;
                     for (int i = 2; i < stxs.size(); i++) {
-                        lambda_expr.push_back(stxs[i]->parse(env));
+                        lambda_expr.push_back(stxs[i]->parse(parse_env));
                     }
                     return (new Define(def_var->s, new Lambda(lambda_paras,new Begin(lambda_expr))));
                 }
@@ -358,6 +367,47 @@ Expr List::parse(Assoc &env) {
                     ld_e.push_back(stxs[i]->parse(parse_env));
                 }
                 return (new Let(bind, new Begin(ld_e)));
+                break;
+            }
+            case E_LETREC: {
+                if (stxs.size() <= 2) throw RuntimeError("invalid var num for letr");
+                List* param_lst = dynamic_cast<List*>(stxs[1].get());
+                if (!param_lst) throw RuntimeError("invalid param format for letr");
+                vector<string> names;
+                vector<Syntax> raw_exprs; 
+                for (auto param : param_lst->stxs){
+                    List* unpack_param = dynamic_cast<List*>(param.get());
+                    if (!unpack_param || unpack_param->stxs.size() != 2) 
+                        throw RuntimeError("invalid param format for letr");
+                    SymbolSyntax* this_formal = dynamic_cast<SymbolSyntax*>(unpack_param->stxs[0].get());
+                    if (!this_formal) throw RuntimeError("invalid param format for letr");
+                    names.push_back(this_formal->s);
+                    raw_exprs.push_back(unpack_param->stxs[1]); 
+                }
+
+                Assoc parse_env = env; 
+                for (const auto& name : names) {
+                    parse_env = extend(name, VoidV(), parse_env);
+                }
+
+                std::vector<std::pair<std::string, Expr>> bind;
+                for (int i = 0; i < names.size(); i++) {
+                    bind.push_back({names[i], raw_exprs[i]->parse(parse_env)});
+                }
+                std::vector<Expr> ld_e;
+                for (int i = 2; i < stxs.size(); i++) {
+                    ld_e.push_back(stxs[i]->parse(parse_env));
+                }
+
+                return (new Letrec(bind, new Begin(ld_e)));
+                break;
+            }
+            case E_SET: {
+                if (stxs.size() != 3) throw RuntimeError("Wrong arg num for set!");
+                if (SymbolSyntax* target = dynamic_cast<SymbolSyntax*>(stxs[1].get())) { //不应该提前做检查
+                    return (new Set(target->s, stxs[2]->parse(env)));
+                }
+                throw RuntimeError("target needs to be a symbol");
                 break;
             }
         	default:
