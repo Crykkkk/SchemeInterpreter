@@ -240,6 +240,9 @@ Value Var::eval(Assoc &e) { // evaluation of variable 对多变量的 eval
                 return ProcedureV(proto.second, proto.first, empty_env);
             }
         }
+        if (reserved_words.count(x)) {
+
+        }
         throw RuntimeError("The variable is not define in the scope"); // 环境里也没有，也不是保留字
     }
     return matched_value; //已经定义过了的情况
