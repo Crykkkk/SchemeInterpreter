@@ -67,7 +67,7 @@ void REPL(){
             else val -> show(std :: cout); // value print
         }
         catch (const RuntimeError &RE){
-            std :: cout << "DEBUG: " << RE.message() << std::endl;
+            // std :: cout << "DEBUG: " << RE.message() << std::endl;
             std :: cout << "RuntimeError";
         }
         puts("");
