@@ -47,7 +47,15 @@ static std::map<ExprType, std::pair<Expr, std::vector<std::string>>> primitive_m
     {E_PROCQ,    {new IsProcedure(new Var("parm")), {"parm"}}},
     {E_SYMBOLQ,  {new IsSymbol(new Var("parm")), {"parm"}}},
     {E_STRINGQ,  {new IsString(new Var("parm")), {"parm"}}},
-    // 不确定要不要加一个 E_LISTQ
+    {E_GE, {new GreaterEqVar({}), {"@args"}}},
+    {E_EQ, {new EqualVar({}), {"@args"}}},
+    {E_LE, {new LessEqVar({}), {"@args"}}},
+    {E_GT, {new GreaterVar({}), {"@args"}}},
+    {E_LT, {new LessVar({}), {"@args"}}},
+    {E_CONS, {new Cons(new Var("parm1"), new Var("parm2")), {"parm1","parm2"}}},
+    {E_CAR, {new Car(new Var("parm")), {"parm"}}},
+    {E_CDR, {new Cdr(new Var("parm")), {"parm"}}},
+    {E_NOT, {new Not(new Var("parm")), {"parm"}}},
     {E_DISPLAY,  {new Display(new Var("parm")), {"parm"}}},
     {E_PLUS,     {new PlusVar({}),  {"@args"}}}, // 只要 plus 就都是E_plus，但是就需要考虑这是对谁的
     {E_MINUS,    {new MinusVar({}), {"@args"}}},
@@ -920,11 +928,10 @@ Value Let::eval(Assoc &env) {
 
 Value Set::eval(Assoc &env) {
     Value val = e->eval(env);
-    try {
+    if (find(var, env).get() != nullptr) {
         modify(var, val, env);
         return Value(VoidV()); 
-    } catch (const RuntimeError&) { 
-    }
+    } 
     auto it = global_env.find(var);
     if (it != global_env.end()) {
         it->second = val;

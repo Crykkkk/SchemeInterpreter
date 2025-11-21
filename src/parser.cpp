@@ -240,6 +240,9 @@ Expr List::parse(Assoc &env) {
         } else if (op_type == E_SETCDR) {
             if (stxs.size() != 3) throw RuntimeError("Wrong arg num for setcdr!");
             return (new SetCdr(stxs[1]->parse(env), stxs[2]->parse(env)));
+        } else if (op_type == E_EXPT) {
+            if (stxs.size() != 3) throw RuntimeError("Wrong arg num for expt");
+            return (new Expt(stxs[1]->parse(env), stxs[2]->parse(env)));
         }
         else {
             //TODO: TO COMPLETE THE LOGIC
